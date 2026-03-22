@@ -1,7 +1,14 @@
 # Automata Simulator
 
 An interactive finite automata visualization tool for designing and simulating DFA and NFA with a technical blueprint aesthetic.
-
+## Table of Contents
+1. [Features](#features)
+2. [Tech Stack](#tech-stack)
+3. [Project Structure](#project-structure)
+4. [Getting Started](#getting-started)
+5. [Usage Guide](#usage-guide)
+6. [Architecture](#architecture)
+7. [Known Behaviors](#known-behaviors)
 ## Features
 
 - **DFA (Deterministic Finite Automaton)**: Single-path execution with duplicate transition detection
@@ -90,27 +97,6 @@ Similar to DFA with additional capabilities:
 - **Select Element**: Select tool + click state/transition to view properties
 - **Delete**: Select element → "Delete State" or "Delete Transition" button
 
-## Design System
-
-**Color Palette:**
-- Background: `#020a13` (deep dark blue)
-- Primary Accent: `#00ffd5` (teal cyan)
-- NFA Accent: `#ff2d55` (pink red)
-- Text Primary: `#d0e8e4` (light teal)
-- Text Secondary: `#5a8a82` (muted teal)
-
-**Visual Effects:**
-- Blueprint grid (major + minor gridlines)
-- Scanline overlay (CRT monitor effect)
-- Ambient glow orbs (subtle motion)
-- Glassmorphism panels (frosted glass sidebars)
-- Coordinate markers (decorative corner labels)
-
-**Typography:**
-- **Syne**: Bold display headings (800 weight)
-- **Chakra Petch**: Body text and UI labels
-- **JetBrains Mono**: Technical labels, code, coordinates
-
 ## Architecture
 
 ### DFA Logic (`scripts/dfa.js`)
@@ -133,14 +119,6 @@ Similar to DFA with additional capabilities:
 4. Render nodes (circles with start arrows, accept double-circles)
 5. Render node labels (state names)
 6. Apply selection/active state styling
-
-## File Dependencies
-
-**Important**: HTML files currently reference resources with relative paths:
-- `<link rel="stylesheet" href="styles.css">` → Should be `../style/styles.css`
-- `<script src="dfa.js">` → Should be `../scripts/dfa.js`
-
-If opening `pages/*.html` directly, update paths or move files to root directory.
 
 ## Known Behaviors
 
