@@ -893,8 +893,12 @@ html[data-theme="dark"] .nav-tabs {
 
 .nav-tab {
     flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     text-align: center;
     padding: 10px 16px;
+    min-height: 44px;
     border-radius: 2px;
     color: var(--text-secondary);
     text-decoration: none;
@@ -903,6 +907,7 @@ html[data-theme="dark"] .nav-tabs {
     font-size: 0.85rem;
     letter-spacing: 0.12em;
     text-transform: uppercase;
+    white-space: nowrap;
     transition: all 0.15s ease;
 }
 
