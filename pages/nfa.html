@@ -12,6 +12,11 @@
 </head>
 
 <body>
+    <!-- Theme Toggle Button -->
+    <button id="theme-toggle" class="theme-toggle" title="Toggle dark/light theme" aria-label="Toggle theme">
+        🌙
+    </button>
+
     <div class="app-container">
         <!-- Main Canvas Area -->
         <main class="canvas-container" id="canvas-container">
@@ -19,15 +24,15 @@
                 <defs>
                     <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6"
                         orient="auto-start-reverse">
-                        <path d="M 0 0 L 10 5 L 0 10 z" fill="#5a8a82" />
+                        <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--text-secondary)" />
                     </marker>
                     <marker id="arrow-selected" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6"
                         orient="auto-start-reverse">
-                        <path d="M 0 0 L 10 5 L 0 10 z" fill="#00ffd5" />
+                        <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--primary)" />
                     </marker>
                     <marker id="arrow-active" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6"
                         orient="auto-start-reverse">
-                        <path d="M 0 0 L 10 5 L 0 10 z" fill="#00ffd5" />
+                        <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--sim-highlight)" />
                     </marker>
                 </defs>
             </svg>
@@ -134,6 +139,80 @@
             </div>
         </footer>
     </div>
+    <!-- Import JSON Modal -->
+    <div id="import-modal" class="modal-overlay" style="display:none;">
+        <div class="modal-panel" style="max-width:960px;width:min(96vw,960px);">
+            <div class="modal-header">
+                <h2>Import JSON</h2>
+                <button id="btn-import-modal-close" class="modal-close">✕</button>
+            </div>
+            <p style="color:var(--text-secondary);font-size:0.82rem;margin-bottom:12px;">
+                Your JSON must follow this NFA template. Edit it and save as <code>.json</code>, then upload below.
+            </p>
+            <pre class="import-template-box">{
+            "type": "NFA",
+            "version": 1,
+            "nodeCounter": 4,
+            "edgeCounter": 6,
+            "nodes": [
+                { "id": "q0", "label": "q0", "x": 100, "y": 200, "isStart": true,  "isAccept": false },
+                { "id": "q1", "label": "q1", "x": 300, "y": 100, "isStart": false, "isAccept": false },
+                { "id": "q2", "label": "q2", "x": 300, "y": 300, "isStart": false, "isAccept": false },
+                { "id": "q3", "label": "q3", "x": 500, "y": 200, "isStart": false, "isAccept": true  }
+            ],
+            "edges": [
+                { "id": "e0", "from": "q0", "to": "q1", "symbols": ["a"],     "cpX": null, "cpY": null },
+                { "id": "e1", "from": "q0", "to": "q2", "symbols": ["ε"],     "cpX": null, "cpY": null },
+                { "id": "e2", "from": "q1", "to": "q1", "symbols": ["a","b"], "cpX": null, "cpY": null },
+                { "id": "e3", "from": "q1", "to": "q3", "symbols": ["b"],     "cpX": null, "cpY": null },
+                { "id": "e4", "from": "q2", "to": "q3", "symbols": ["a","b"], "cpX": null, "cpY": null },
+                { "id": "e5", "from": "q3", "to": "q0", "symbols": ["ε"],     "cpX": 300,  "cpY": 250 }
+            ]
+            }</pre>
+            <div style="display:flex;gap:10px;margin-top:16px;justify-content:flex-end;">
+                <button id="btn-import-file-pick" class="tool-btn" style="width:auto;padding:8px 18px;">
+                    <span class="icon">⬆️</span> Choose File &amp; Import
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+    /* Active edge highlight during simulation */
+    g.transition.active-edge-sim .transition-path {
+        stroke: var(--sim-highlight) !important;
+        stroke-width: 3.5px !important;
+        filter: drop-shadow(0 0 6px rgba(90, 175, 100, 0.45));
+        marker-end: url(#arrow-active) !important;
+    }
+    g.transition.active-edge-sim .transition-text {
+        fill: #3f8f4d !important;
+        font-weight: 700;
+    }
+
+    /* Import template code box */
+    .import-template-box {
+        background: #ffffff;
+        border: 1px solid #000000;
+        border-radius: 8px;
+        padding: 14px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.72rem;
+        color: #000000;
+        overflow-x: auto;
+        white-space: pre;
+        line-height: 1.6;
+        max-height: 320px;
+        overflow-y: auto;
+    }
+
+    html[data-theme="dark"] .import-template-box {
+        background: #000000;
+        border-color: #ffffff;
+        color: #ffffff;
+    }
+    </style>
+    <script src="../scripts/theme-switcher.js"></script>
     <script src="../scripts/nfa.js"></script>
 </body>
 

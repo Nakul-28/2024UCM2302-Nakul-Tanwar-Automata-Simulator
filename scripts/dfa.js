@@ -126,7 +126,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (edge) {
                 const warningEl = document.getElementById('dfa-warning');
                 const symbols = e.target.value.split(',').map(s => s.trim()).filter(s => s.length > 0);
-                const newSymbols = symbols.length > 0 ? symbols : ['ε'];
+                const hasEpsilon = symbols.some(s => s === 'ε' || s === 'epsilon');
+                if (hasEpsilon) {
+                    warningEl.textContent = '⛔ DFA does not allow ε (epsilon) transitions. Use NFA for that.';
+                    warningEl.style.display = 'block';
+                    edge.symbols = symbols.filter(s => s !== 'ε' && s !== 'epsilon') || ['?'];
+                    updateRender();
+                    return;
+                }
+                const newSymbols = symbols.length > 0 ? symbols : ['?'];
 
                 // DFA validation: check if any of these symbols already have a transition
                 // from the same source state on a DIFFERENT edge
@@ -337,7 +345,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         id: `e${appState.edgeCounter++}`,
                         from: appState.tempEdgeSourceId,
                         to: targetNodeId,
-                        symbols: ['ε'],
+                        symbols: ['?'],
                         cpX: cp ? cp.x : null,
                         cpY: cp ? cp.y : null
                     };
@@ -696,6 +704,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         updateRender(); // will render active states 
+        document.querySelectorAll('g.transition.active-edge-sim').forEach(el => el.classList.remove('active-edge-sim'));
     }
 
     function stepSim() {
@@ -728,13 +737,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         appState.sim.activeStates = getEpsilonClosure(Array.from(nextStates));
 
-        // Mark transitioned edges briefly active
+        // Clear previously highlighted edges
+        document.querySelectorAll('g.transition.active-edge-sim').forEach(el => el.classList.remove('active-edge-sim'));
+
+        // Mark transitioned edges as active
         usedTransitions.forEach(eId => {
             const g = document.querySelector(`g.transition[data-id="${eId}"]`);
-            if (g) {
-                g.classList.add('active-sim');
-                setTimeout(() => g.classList.remove('active-sim'), 300);
-            }
+            if (g) g.classList.add('active-edge-sim');
         });
 
         // update tape UI
@@ -1013,7 +1022,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('btn-export').addEventListener('click', exportJSON);
     document.getElementById('btn-import').addEventListener('click', () => {
+    document.getElementById('import-modal').style.display = 'flex';
+    });
+
+    document.getElementById('btn-import-modal-close').addEventListener('click', () => {
+        document.getElementById('import-modal').style.display = 'none';
+    });
+
+    document.getElementById('btn-import-file-pick').addEventListener('click', () => {
         document.getElementById('import-file-input').click();
+    });
+
+    document.getElementById('import-modal').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('import-modal'))
+            document.getElementById('import-modal').style.display = 'none';
     });
     document.getElementById('import-file-input').addEventListener('change', (e) => {
         if (e.target.files[0]) {

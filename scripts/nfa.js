@@ -634,6 +634,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Update status with active state count
         updateActiveStatesDisplay();
         updateRender();
+        document.querySelectorAll('g.transition.active-edge-sim').forEach(el => el.classList.remove('active-edge-sim'));
     }
 
     function updateActiveStatesDisplay() {
@@ -678,13 +679,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // Apply epsilon closure to the result
         appState.sim.activeStates = getEpsilonClosure(Array.from(nextStates));
 
-        // Mark transitioned edges briefly active
+        // Clear previously highlighted edges
+        document.querySelectorAll('g.transition.active-edge-sim').forEach(el => el.classList.remove('active-edge-sim'));
+
+        // Mark transitioned edges as active
         usedTransitions.forEach(eId => {
             const g = document.querySelector(`g.transition[data-id="${eId}"]`);
-            if (g) {
-                g.classList.add('active-sim');
-                setTimeout(() => g.classList.remove('active-sim'), 300);
-            }
+            if (g) g.classList.add('active-edge-sim');
         });
 
         // update tape UI
@@ -942,7 +943,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('btn-export').addEventListener('click', exportJSON);
     document.getElementById('btn-import').addEventListener('click', () => {
+    document.getElementById('import-modal').style.display = 'flex';
+    });
+
+    document.getElementById('btn-import-modal-close').addEventListener('click', () => {
+        document.getElementById('import-modal').style.display = 'none';
+    });
+
+    document.getElementById('btn-import-file-pick').addEventListener('click', () => {
         document.getElementById('import-file-input').click();
+    });
+
+    document.getElementById('import-modal').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('import-modal'))
+            document.getElementById('import-modal').style.display = 'none';
     });
     document.getElementById('import-file-input').addEventListener('change', (e) => {
         if (e.target.files[0]) {
