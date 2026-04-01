@@ -32,8 +32,8 @@ An interactive finite automata visualization tool for designing and simulating D
 │   ├── dfa.html        # DFA simulator interface
 │   └── nfa.html        # NFA simulator interface
 ├── scripts/
-│   ├── dfa.js          # DFA core logic (852 lines)
-│   └── nfa.js          # NFA core logic with ε-closure (798 lines)
+│   ├── dfa.js          # DFA core logic
+│   └── nfa.js          # NFA core logic with ε-closure
 ├── style/
 │   └── styles.css      # Global stylesheet with blueprint theme
 ├── frontend-design.md  # Design guidelines and constraints
@@ -46,17 +46,12 @@ An interactive finite automata visualization tool for designing and simulating D
 
 Since this is a static HTML/CSS/JS project, you can run it with any local server:
 
-**Option 1: Python HTTP Server**
-```bash
-python -m http.server 8000
-```
-
-**Option 2: Node.js http-server**
+**Option 1: Node.js http-server**
 ```bash
 npx http-server -p 8000
 ```
 
-**Option 3: VS Code Live Server**
+**Option 2: VS Code Live Server**
 Right-click `pages/index.html` → "Open with Live Server"
 
 Then navigate to `http://localhost:8000/pages/index.html`
@@ -78,7 +73,7 @@ Then navigate to `http://localhost:8000/pages/index.html`
    - Use **Reset** (⏮️) to initialize
    - Use **Step** (⏭️) to advance one symbol
    - Use **Play** (▶️) to auto-run simulation
-6. **DFA Validation**: Warnings appear for duplicate transitions from same state
+6. **DFA Validation**: Warnings appear for duplicate transitions from same state, and use of  `ε` or `epsilon` in the transition symbols.
 
 ### NFA Simulator (`pages/nfa.html`)
 
