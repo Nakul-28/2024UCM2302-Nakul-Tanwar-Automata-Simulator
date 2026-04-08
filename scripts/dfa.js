@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- Initial Setup ---
     const canvas = document.getElementById('automata-canvas');
+    const canvasContainer = document.getElementById('canvas-container');
     const svgNS = 'http://www.w3.org/2000/svg';
 
     // Create layers to ensure states are drawn strictly over edges
@@ -428,6 +429,24 @@ document.addEventListener('DOMContentLoaded', () => {
         elementsGroup.setAttribute('transform', `translate(${panX}, ${panY}) scale(${zoom})`);
     }
 
+    function centerAutomatonInCanvas() {
+        if (!appState.nodes.length) return;
+
+        const viewRect = canvas.getBoundingClientRect();
+        const padding = STATE_RADIUS + 20;
+        const minX = Math.min(...appState.nodes.map(n => n.x)) - padding;
+        const maxX = Math.max(...appState.nodes.map(n => n.x)) + padding;
+        const minY = Math.min(...appState.nodes.map(n => n.y)) - padding;
+        const maxY = Math.max(...appState.nodes.map(n => n.y)) + padding;
+
+        zoom = 1;
+        const centerX = (minX + maxX) / 2;
+        const centerY = (minY + maxY) / 2;
+        panX = (viewRect.width / 2) - (centerX * zoom);
+        panY = (viewRect.height / 2) - (centerY * zoom);
+        applyPanTransform();
+    }
+
     // Zoom via mouse wheel — zoom toward cursor position
     canvas.addEventListener('wheel', (e) => {
         e.preventDefault();
@@ -722,8 +741,78 @@ document.addEventListener('DOMContentLoaded', () => {
         btnPlay: document.getElementById('btn-play'),
         speedSlider: document.getElementById('speed-slider'),
         tapeContainer: document.getElementById('sim-tape'),
-        resultBadge: document.getElementById('sim-result')
+        resultBadge: document.getElementById('sim-result'),
+        liveLog: document.getElementById('sim-live-log')
     };
+
+    function initDraggableLivePanel() {
+        const panel = document.getElementById('sim-live-panel');
+        const handle = panel ? panel.querySelector('.sim-live-title') : null;
+        if (!panel || !handle || !canvasContainer) return;
+
+        let dragging = false;
+        let offsetX = 0;
+        let offsetY = 0;
+
+        function clampToCanvas(left, top) {
+            const rect = canvasContainer.getBoundingClientRect();
+            const maxLeft = Math.max(8, rect.width - panel.offsetWidth - 8);
+            const maxTop = Math.max(8, rect.height - panel.offsetHeight - 8);
+            return {
+                left: Math.max(8, Math.min(left, maxLeft)),
+                top: Math.max(8, Math.min(top, maxTop))
+            };
+        }
+
+        function applyPosition(left, top) {
+            const pos = clampToCanvas(left, top);
+            panel.style.left = `${pos.left}px`;
+            panel.style.top = `${pos.top}px`;
+            panel.style.right = 'auto';
+        }
+
+        function moveFromPointer(event) {
+            if (!dragging) return;
+            const rect = canvasContainer.getBoundingClientRect();
+            const left = event.clientX - rect.left - offsetX;
+            const top = event.clientY - rect.top - offsetY;
+            applyPosition(left, top);
+        }
+
+        handle.addEventListener('pointerdown', (event) => {
+            event.preventDefault();
+            const panelRect = panel.getBoundingClientRect();
+            offsetX = event.clientX - panelRect.left;
+            offsetY = event.clientY - panelRect.top;
+            dragging = true;
+            panel.classList.add('dragging');
+            handle.setPointerCapture(event.pointerId);
+        });
+
+        handle.addEventListener('pointermove', moveFromPointer);
+
+        handle.addEventListener('pointerup', (event) => {
+            dragging = false;
+            panel.classList.remove('dragging');
+            handle.releasePointerCapture(event.pointerId);
+        });
+
+        handle.addEventListener('pointercancel', () => {
+            dragging = false;
+            panel.classList.remove('dragging');
+        });
+
+        window.addEventListener('resize', () => {
+            const currentLeft = parseFloat(panel.style.left || '0');
+            const currentTop = parseFloat(panel.style.top || '82');
+            applyPosition(currentLeft, currentTop);
+        });
+
+        const startLeft = canvasContainer.clientWidth - panel.offsetWidth - 20;
+        applyPosition(startLeft, 82);
+    }
+
+    initDraggableLivePanel();
 
     const dfaExamples = {
         'dfa-ends-with-01': {
@@ -779,6 +868,7 @@ document.addEventListener('DOMContentLoaded', () => {
         appState.nodeCounter = nextCounter(appState.nodes, 'q');
         appState.edgeCounter = nextCounter(appState.edges, 'e');
         uiControls.input.value = example.input;
+        centerAutomatonInCanvas();
 
         deselectAll();
         resetSim();
@@ -815,6 +905,32 @@ document.addEventListener('DOMContentLoaded', () => {
         return normalized.split('');
     }
 
+    function getStateLabel(id) {
+        const node = appState.nodes.find(n => n.id === id);
+        return node ? node.label : id;
+    }
+
+    function formatStateSet(ids) {
+        const labels = ids.map(getStateLabel);
+        return `{${labels.join(', ')}}`;
+    }
+
+    function clearLiveLog() {
+        if (uiControls.liveLog) uiControls.liveLog.innerHTML = '';
+    }
+
+    function pushLiveLog(text, muted = false) {
+        if (!uiControls.liveLog) return;
+        const line = document.createElement('div');
+        line.className = `sim-live-line${muted ? ' muted' : ''}`;
+        line.textContent = text;
+        uiControls.liveLog.appendChild(line);
+        while (uiControls.liveLog.children.length > 40) {
+            uiControls.liveLog.removeChild(uiControls.liveLog.firstChild);
+        }
+        uiControls.liveLog.scrollTop = uiControls.liveLog.scrollHeight;
+    }
+
     function resetSim() {
         clearTimeout(appState.sim.intervalId);
         appState.sim.tape = buildInputTape(uiControls.input.value);
@@ -842,8 +958,19 @@ document.addEventListener('DOMContentLoaded', () => {
             appState.sim.activeStates = getEpsilonClosure(startNodes);
         }
 
+        clearLiveLog();
+        pushLiveLog(`Input: ${appState.sim.tape.length ? appState.sim.tape.join('') : '(empty)'}`, true);
+        if (appState.sim.activeStates.length > 0) {
+            pushLiveLog(`Initial active state: ${formatStateSet(appState.sim.activeStates)}`);
+        } else {
+            pushLiveLog('No start state is set.', true);
+        }
+
         updateRender(); // will render active states 
         document.querySelectorAll('g.transition.active-edge-sim').forEach(el => el.classList.remove('active-edge-sim'));
+
+        const cells = uiControls.tapeContainer.children;
+        if (cells[0]) cells[0].classList.add('active');
 
         // Empty input is accepted iff an accepting state is reachable at start.
         if (appState.sim.tape.length === 0) {
@@ -869,12 +996,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // calculate next states
         let nextStates = new Set();
         let usedTransitions = new Set();
+        const takenTransitions = [];
 
         appState.sim.activeStates.forEach(stateId => {
             appState.edges.forEach(edge => {
                 if (edge.from === stateId && edge.symbols.includes(symbol)) {
                     nextStates.add(edge.to);
                     usedTransitions.add(edge.id);
+                    takenTransitions.push({ from: stateId, to: edge.to });
                 }
             });
         });
@@ -901,6 +1030,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (cells[appState.sim.head]) {
             cells[appState.sim.head].classList.add('active');
+        }
+
+        if (takenTransitions.length === 0) {
+            pushLiveLog(`Step ${appState.sim.head}: ${formatStateSet(appState.sim.activeStates)} on '${symbol}' -> no transition`);
+        } else {
+            const detail = takenTransitions
+                .map(t => `${getStateLabel(t.from)} --${symbol}--> ${getStateLabel(t.to)}`)
+                .join(' | ');
+            pushLiveLog(`Step ${appState.sim.head}: ${detail}`);
+            pushLiveLog(`Active after step: ${formatStateSet(appState.sim.activeStates)}`, true);
         }
 
         updateRender();
@@ -933,10 +1072,12 @@ document.addEventListener('DOMContentLoaded', () => {
             appState.sim.status = 'accepted';
             uiControls.resultBadge.className = 'result-badge accepted';
             uiControls.resultBadge.textContent = 'Accepted';
+            pushLiveLog(`Result: accepted at ${formatStateSet(appState.sim.activeStates)}`);
         } else {
             appState.sim.status = 'rejected';
             uiControls.resultBadge.className = 'result-badge rejected';
             uiControls.resultBadge.textContent = 'Rejected';
+            pushLiveLog(`Result: rejected at ${formatStateSet(appState.sim.activeStates)}`);
         }
         uiControls.btnPlay.textContent = '▶️ Play';
     }
@@ -946,6 +1087,7 @@ document.addEventListener('DOMContentLoaded', () => {
         uiControls.resultBadge.className = 'result-badge rejected';
         uiControls.resultBadge.textContent = 'Rejected - Stuck';
         uiControls.btnPlay.textContent = '▶️ Play';
+        pushLiveLog('Result: rejected because no active state can consume the next symbol.');
     }
 
     uiControls.btnReset.addEventListener('click', resetSim);
@@ -959,6 +1101,7 @@ document.addEventListener('DOMContentLoaded', () => {
             clearTimeout(appState.sim.intervalId);
             appState.sim.status = 'idle';
             uiControls.btnPlay.textContent = '▶️ Play';
+            pushLiveLog('Playback paused.', true);
         } else {
             // Play
             if (appState.sim.status === 'idle') {
@@ -977,6 +1120,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             appState.sim.status = 'playing';
             uiControls.btnPlay.textContent = '⏸️ Pause';
+            pushLiveLog('Playback started.', true);
 
             const playStep = () => {
                 if (appState.sim.status !== 'playing') return;
@@ -1268,75 +1412,322 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ================================================================
-    // FEATURE 3: TRANSITION TABLE
+    // FEATURE 3: TRANSITION TABLE EDITOR (DFA)
     // ================================================================
-    function buildTransitionTable() {
-        // Collect all symbols used across all edges
-        const symbolSet = new Set();
-        appState.edges.forEach(e => e.symbols.forEach(s => symbolSet.add(s)));
-        const symbols = Array.from(symbolSet).sort();
+    let tableEditor = null;
+    let tempStateCounter = 0;
 
-        // Build rows: one per node
-        const rows = appState.nodes.map(node => {
-            const cells = symbols.map(sym => {
-                const targets = appState.edges
-                    .filter(e => e.from === node.id && e.symbols.includes(sym))
-                    .map(e => {
-                        const t = appState.nodes.find(n => n.id === e.to);
-                        return t ? t.label : e.to;
-                    });
-                return targets.length > 0 ? targets.join(', ') : null;
-            });
-            return { node, cells };
-        });
-
-        return { symbols, rows };
+    function makeTempStateId() {
+        tempStateCounter += 1;
+        return `tmp-state-${tempStateCounter}`;
     }
 
-    function showTransitionTable() {
-        const modal = document.getElementById('table-modal');
+    function buildTransitionEditorModel() {
+        const symbolSet = new Set();
+        appState.edges.forEach(e => e.symbols.forEach(s => symbolSet.add(s)));
+
+        const symbols = Array.from(symbolSet).sort();
+        const states = appState.nodes.map(n => ({
+            id: n.id,
+            label: n.label || n.id,
+            isStart: !!n.isStart,
+            isAccept: !!n.isAccept
+        }));
+
+        if (states.length > 0 && !states.some(s => s.isStart)) {
+            states[0].isStart = true;
+        }
+
+        const transitions = {};
+        states.forEach(state => {
+            transitions[state.id] = {};
+            symbols.forEach(sym => {
+                const edge = appState.edges.find(e => e.from === state.id && e.symbols.includes(sym));
+                if (!edge) {
+                    transitions[state.id][sym] = '';
+                    return;
+                }
+                const node = appState.nodes.find(n => n.id === edge.to);
+                transitions[state.id][sym] = node ? node.label : edge.to;
+            });
+        });
+
+        tableEditor = { states, symbols, transitions };
+    }
+
+    function renderTransitionEditor() {
         const container = document.getElementById('table-container');
+        if (!tableEditor) buildTransitionEditorModel();
 
-        if (appState.nodes.length === 0) {
-            container.innerHTML = '<p class="table-empty-msg">No states in the automaton yet.</p>';
-            modal.style.display = 'flex';
-            return;
-        }
+        let html = '';
+        html += '<div class="table-editor-toolbar">';
+        html += '<input type="text" id="table-new-state" placeholder="New state label">';
+        html += '<button id="btn-table-add-state">Add State</button>';
+        html += '<input type="text" id="table-new-symbol" placeholder="New symbol">';
+        html += '<button id="btn-table-add-symbol">Add Symbol</button>';
+        html += '</div>';
 
-        const { symbols, rows } = buildTransitionTable();
-
-        if (symbols.length === 0) {
-            container.innerHTML = '<p class="table-empty-msg">No transitions defined yet.</p>';
-            modal.style.display = 'flex';
-            return;
-        }
-
-        let html = '<table class="transition-table"><thead><tr>';
-        html += '<th>State</th>';
-        symbols.forEach(s => { html += `<th>${s}</th>`; });
+        html += '<table class="transition-table table-editor-grid"><thead><tr>';
+        html += '<th>State</th><th>Start</th><th>Accept</th><th>Delete</th>';
+        tableEditor.symbols.forEach(sym => {
+            html += `<th>${sym} <button class="table-mini-danger btn-remove-symbol" data-symbol="${sym}">x</button></th>`;
+        });
         html += '</tr></thead><tbody>';
 
-        rows.forEach(({ node, cells }) => {
-            let stateClass = 'state-header';
-            if (node.isStart) stateClass += ' start-state';
-            if (node.isAccept) stateClass += ' accept-state';
-            const marker = node.isAccept ? `(${node.label})` : node.label;
-            html += `<tr><td class="${stateClass}">${marker}</td>`;
-            cells.forEach(cell => {
-                if (cell) {
-                    html += `<td>${cell}</td>`;
-                } else {
-                    html += `<td class="empty-cell">—</td>`;
-                }
+        tableEditor.states.forEach(state => {
+            html += `<tr data-state-id="${state.id}">`;
+            html += `<td><input type="text" class="table-state-label" data-state-id="${state.id}" value="${state.label}"></td>`;
+            html += `<td><input type="radio" name="table-dfa-start" class="table-state-start" data-state-id="${state.id}" ${state.isStart ? 'checked' : ''}></td>`;
+            html += `<td><input type="checkbox" class="table-state-accept" data-state-id="${state.id}" ${state.isAccept ? 'checked' : ''}></td>`;
+            html += `<td><button class="table-mini-danger btn-remove-state" data-state-id="${state.id}">Delete</button></td>`;
+
+            tableEditor.symbols.forEach(sym => {
+                const value = tableEditor.transitions[state.id]?.[sym] || '';
+                html += `<td><input type="text" class="table-transition-input" data-from="${state.id}" data-symbol="${sym}" placeholder="target" value="${value}"></td>`;
             });
+
             html += '</tr>';
         });
 
         html += '</tbody></table>';
-        html += '<p style="margin-top:12px;font-family:\'JetBrains Mono\',monospace;font-size:0.72rem;color:var(--text-secondary);">→ = start state &nbsp;|&nbsp; (q) = accept state</p>';
+        html += '<div class="table-editor-hint">DFA rule: each cell holds one target state label. Leave blank to delete that transition.</div>';
+        html += '<div class="table-editor-actions">';
+        html += '<button id="btn-table-reset">Reset From Diagram</button>';
+        html += '<button id="btn-table-apply">Apply To Diagram</button>';
+        html += '</div>';
 
         container.innerHTML = html;
-        modal.style.display = 'flex';
+        bindTransitionEditorEvents();
+    }
+
+    function ensureTransitionSlotsForSymbol(symbol) {
+        tableEditor.states.forEach(state => {
+            if (!tableEditor.transitions[state.id]) tableEditor.transitions[state.id] = {};
+            if (!Object.prototype.hasOwnProperty.call(tableEditor.transitions[state.id], symbol)) {
+                tableEditor.transitions[state.id][symbol] = '';
+            }
+        });
+    }
+
+    function removeSymbolFromModel(symbol) {
+        tableEditor.symbols = tableEditor.symbols.filter(s => s !== symbol);
+        Object.keys(tableEditor.transitions).forEach(stateId => {
+            delete tableEditor.transitions[stateId][symbol];
+        });
+    }
+
+    function removeStateFromModel(stateId) {
+        tableEditor.states = tableEditor.states.filter(s => s.id !== stateId);
+        delete tableEditor.transitions[stateId];
+        tableEditor.states.forEach(s => {
+            tableEditor.symbols.forEach(sym => {
+                const current = tableEditor.transitions[s.id]?.[sym] || '';
+                const target = tableEditor.states.find(t => t.label === current);
+                if (!target) tableEditor.transitions[s.id][sym] = '';
+            });
+        });
+        if (tableEditor.states.length > 0 && !tableEditor.states.some(s => s.isStart)) {
+            tableEditor.states[0].isStart = true;
+        }
+    }
+
+    function bindTransitionEditorEvents() {
+        document.getElementById('btn-table-add-state').addEventListener('click', () => {
+            const input = document.getElementById('table-new-state');
+            const raw = (input.value || '').trim();
+            if (!raw) return;
+            const exists = tableEditor.states.some(s => s.label === raw);
+            if (exists) {
+                alert('State label already exists. Use a unique label.');
+                return;
+            }
+            const stateId = makeTempStateId();
+            tableEditor.states.push({
+                id: stateId,
+                label: raw,
+                isStart: tableEditor.states.length === 0,
+                isAccept: false
+            });
+            tableEditor.transitions[stateId] = {};
+            tableEditor.symbols.forEach(sym => { tableEditor.transitions[stateId][sym] = ''; });
+            input.value = '';
+            renderTransitionEditor();
+        });
+
+        document.getElementById('btn-table-add-symbol').addEventListener('click', () => {
+            const input = document.getElementById('table-new-symbol');
+            const sym = (input.value || '').trim();
+            if (!sym) return;
+            if (sym === 'ε' || sym.toLowerCase() === 'epsilon') {
+                alert('DFA does not allow epsilon transitions.');
+                return;
+            }
+            if (!tableEditor.symbols.includes(sym)) {
+                tableEditor.symbols.push(sym);
+                tableEditor.symbols.sort();
+                ensureTransitionSlotsForSymbol(sym);
+            }
+            input.value = '';
+            renderTransitionEditor();
+        });
+
+        document.querySelectorAll('.btn-remove-symbol').forEach(btn => {
+            btn.addEventListener('click', () => {
+                removeSymbolFromModel(btn.dataset.symbol);
+                renderTransitionEditor();
+            });
+        });
+
+        document.querySelectorAll('.btn-remove-state').forEach(btn => {
+            btn.addEventListener('click', () => {
+                removeStateFromModel(btn.dataset.stateId);
+                renderTransitionEditor();
+            });
+        });
+
+        document.querySelectorAll('.table-state-label').forEach(input => {
+            input.addEventListener('input', () => {
+                const state = tableEditor.states.find(s => s.id === input.dataset.stateId);
+                if (state) state.label = input.value;
+            });
+        });
+
+        document.querySelectorAll('.table-state-start').forEach(input => {
+            input.addEventListener('change', () => {
+                tableEditor.states.forEach(s => { s.isStart = s.id === input.dataset.stateId; });
+            });
+        });
+
+        document.querySelectorAll('.table-state-accept').forEach(input => {
+            input.addEventListener('change', () => {
+                const state = tableEditor.states.find(s => s.id === input.dataset.stateId);
+                if (state) state.isAccept = input.checked;
+            });
+        });
+
+        document.querySelectorAll('.table-transition-input').forEach(input => {
+            input.addEventListener('input', () => {
+                const from = input.dataset.from;
+                const symbol = input.dataset.symbol;
+                if (!tableEditor.transitions[from]) tableEditor.transitions[from] = {};
+                tableEditor.transitions[from][symbol] = input.value;
+            });
+        });
+
+        document.getElementById('btn-table-reset').addEventListener('click', () => {
+            buildTransitionEditorModel();
+            renderTransitionEditor();
+        });
+
+        document.getElementById('btn-table-apply').addEventListener('click', applyTransitionEditorToDiagram);
+    }
+
+    function getCircularLayoutPosition(index, total) {
+        const centerX = 440;
+        const centerY = 250;
+        const radius = Math.max(120, Math.min(240, total * 24));
+        const angle = (Math.PI * 2 * index) / Math.max(total, 1);
+        return {
+            x: centerX + radius * Math.cos(angle),
+            y: centerY + radius * Math.sin(angle)
+        };
+    }
+
+    function applyTransitionEditorToDiagram() {
+        const cleanedStates = tableEditor.states.map(s => ({
+            ...s,
+            label: (s.label || '').trim()
+        }));
+
+        if (cleanedStates.some(s => !s.label)) {
+            alert('Every state must have a label.');
+            return;
+        }
+
+        const labelSet = new Set();
+        for (const state of cleanedStates) {
+            if (labelSet.has(state.label)) {
+                alert('State labels must be unique.');
+                return;
+            }
+            labelSet.add(state.label);
+        }
+
+        if (cleanedStates.length > 0 && !cleanedStates.some(s => s.isStart)) {
+            cleanedStates[0].isStart = true;
+        }
+
+        const currentById = new Map(appState.nodes.map(n => [n.id, n]));
+        const labelToState = new Map(cleanedStates.map(s => [s.label, s]));
+
+        const newNodes = cleanedStates.map((state, idx) => {
+            const sourceStateId = state.id;
+            const existing = currentById.get(state.id);
+            const finalId = existing ? existing.id : `q${appState.nodeCounter++}`;
+            const pos = existing ? { x: existing.x, y: existing.y } : getCircularLayoutPosition(idx, cleanedStates.length);
+            state._tableId = sourceStateId;
+            state.id = finalId;
+            return {
+                id: finalId,
+                label: state.label,
+                x: pos.x,
+                y: pos.y,
+                isStart: !!state.isStart,
+                isAccept: !!state.isAccept
+            };
+        });
+
+        const edgeMap = new Map();
+        const errors = [];
+
+        cleanedStates.forEach(state => {
+            tableEditor.symbols.forEach(sym => {
+                const rawTarget = (tableEditor.transitions[state._tableId]?.[sym] || '').trim();
+                if (!rawTarget) return;
+
+                const targetState = labelToState.get(rawTarget);
+                if (!targetState) {
+                    errors.push(`Missing target state '${rawTarget}' for ${state.label} with symbol '${sym}'`);
+                    return;
+                }
+
+                const key = `${state.id}->${targetState.id}`;
+                if (!edgeMap.has(key)) edgeMap.set(key, new Set());
+                edgeMap.get(key).add(sym);
+            });
+        });
+
+        if (errors.length > 0) {
+            alert(`Cannot apply table:\n${errors.join('\n')}`);
+            return;
+        }
+
+        const newEdges = [];
+        edgeMap.forEach((symbolSet, key) => {
+            const [from, to] = key.split('->');
+            newEdges.push({
+                id: `e${appState.edgeCounter++}`,
+                from,
+                to,
+                symbols: Array.from(symbolSet).sort(),
+                cpX: null,
+                cpY: null
+            });
+        });
+
+        saveSnapshot();
+        appState.nodes = newNodes;
+        appState.edges = newEdges;
+        deselectAll();
+        resetSim();
+        updateRender();
+        document.getElementById('status-message').textContent = 'Updated diagram from transition table.';
+    }
+
+    function showTransitionTable() {
+        buildTransitionEditorModel();
+        renderTransitionEditor();
+        document.getElementById('table-modal').style.display = 'flex';
     }
 
     document.getElementById('btn-show-table').addEventListener('click', showTransitionTable);

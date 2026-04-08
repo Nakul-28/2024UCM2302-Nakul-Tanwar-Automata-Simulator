@@ -680,6 +680,7 @@ html[data-theme="dark"] .sim-btn.primary:hover {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 14px;
 }
 
 .tape {
@@ -778,6 +779,162 @@ html[data-theme="dark"] .result-badge.rejected {
     background: rgba(244, 67, 54, 0.2);
     color: #ff9d97;
     border-color: #f0746b;
+}
+
+.sim-live-panel {
+    position: absolute;
+    top: 82px;
+    right: 20px;
+    width: min(34vw, 400px);
+    min-width: 300px;
+    border: 1px solid var(--border-dim);
+    background: rgba(255, 255, 255, 0.75);
+    border-radius: 2px;
+    padding: 8px 10px;
+    height: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 30;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.14);
+    user-select: none;
+    touch-action: none;
+}
+
+html[data-theme="dark"] .sim-live-panel {
+    background: rgba(12, 12, 12, 0.9);
+    border-color: rgba(255, 255, 255, 0.18);
+}
+
+.sim-live-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    cursor: grab;
+    padding-bottom: 4px;
+    border-bottom: 1px dashed var(--border-dim);
+}
+
+.sim-live-panel.dragging .sim-live-title {
+    cursor: grabbing;
+}
+
+.sim-live-log {
+    flex: 1;
+    overflow-y: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    line-height: 1.45;
+    color: var(--text-primary);
+    padding-right: 4px;
+}
+
+.sim-live-line {
+    margin-bottom: 3px;
+    opacity: 0.95;
+}
+
+.sim-live-line.muted {
+    color: var(--text-secondary);
+    opacity: 0.8;
+}
+
+.table-editor-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.table-editor-toolbar input {
+    padding: 7px 10px;
+    border: 1px solid var(--border-dim);
+    border-radius: 2px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.76rem;
+}
+
+.table-editor-toolbar button,
+.table-editor-actions button {
+    padding: 7px 11px;
+    border: 1px solid var(--border-dim);
+    background: #efefef;
+    border-radius: 2px;
+    cursor: pointer;
+    font-family: 'Chakra Petch', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+html[data-theme="dark"] .table-editor-toolbar button,
+html[data-theme="dark"] .table-editor-actions button {
+    background: #131313;
+    color: var(--text-primary);
+}
+
+.table-editor-toolbar button:hover,
+.table-editor-actions button:hover {
+    border-color: var(--primary);
+}
+
+.table-editor-actions {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.table-editor-grid input[type="text"] {
+    width: 100%;
+    min-width: 88px;
+    padding: 6px 8px;
+    border: 1px solid var(--border-dim);
+    border-radius: 2px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+}
+
+.table-editor-grid input[type="checkbox"] {
+    transform: scale(1.05);
+}
+
+.table-mini-danger {
+    color: #a70000;
+    font-size: 0.72rem;
+    border: 1px solid rgba(167, 0, 0, 0.25);
+    background: #fff2f2;
+    padding: 4px 6px;
+    border-radius: 2px;
+    cursor: pointer;
+}
+
+html[data-theme="dark"] .table-mini-danger {
+    background: rgba(167, 0, 0, 0.1);
+    color: #ffb5b5;
+}
+
+.table-editor-hint {
+    margin-top: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+}
+
+@media (max-width: 1100px) {
+    .sim-status {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .sim-live-panel {
+        min-width: 220px;
+        width: min(86vw, 360px);
+        height: 264px;
+    }
 }
 
 /* SVG Elements styles */
