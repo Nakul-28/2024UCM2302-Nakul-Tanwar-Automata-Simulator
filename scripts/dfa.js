@@ -1444,6 +1444,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const raw = document.getElementById('json-editor-input').value;
             const data = JSON.parse(raw);
             applyImportedData(data, 'JSON editor');
+            document.getElementById('json-editor-modal').style.display = 'none';
+            alert('JSON applied successfully.');
         } catch (err) {
             alert('Failed to apply JSON: ' + err.message);
         }
