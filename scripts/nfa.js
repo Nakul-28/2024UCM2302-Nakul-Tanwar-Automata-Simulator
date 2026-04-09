@@ -49,6 +49,9 @@ document.addEventListener('DOMContentLoaded', () => {
         dragNodeId: null,
         dragOffsetX: 0,
         dragOffsetY: 0,
+        dragEdgeId: null,
+        dragEdgeOffsetX: 0,
+        dragEdgeOffsetY: 0,
 
         isDrawingEdge: false,
         tempEdgeSourceId: null,
@@ -167,6 +170,22 @@ document.addEventListener('DOMContentLoaded', () => {
         updateRender();
     }
 
+    function ensureEdgeControlPoint(edge) {
+        const sourceInfo = appState.nodes.find(n => n.id === edge.from);
+        const targetInfo = appState.nodes.find(n => n.id === edge.to);
+        if (!sourceInfo || !targetInfo) return;
+
+        if (edge.cpX == null || edge.cpY == null) {
+            if (edge.from === edge.to) {
+                edge.cpX = sourceInfo.x;
+                edge.cpY = sourceInfo.y - 90;
+            } else {
+                edge.cpX = (sourceInfo.x + targetInfo.x) / 2;
+                edge.cpY = (sourceInfo.y + targetInfo.y) / 2;
+            }
+        }
+    }
+
     // Canvas Events — account for pan and zoom so node positions are in world space
     const getMouseCoords = (e) => {
         const rect = canvas.getBoundingClientRect();
@@ -218,6 +237,16 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (edgeGroup && currentMode === 'select') {
                 const edgeId = edgeGroup.getAttribute('data-id');
                 selectEdge(edgeId);
+
+                if (e.button === 0) {
+                    const edge = appState.edges.find(ed => ed.id === edgeId);
+                    if (edge) {
+                        ensureEdgeControlPoint(edge);
+                        appState.dragEdgeId = edgeId;
+                        appState.dragEdgeOffsetX = x - edge.cpX;
+                        appState.dragEdgeOffsetY = y - edge.cpY;
+                    }
+                }
                 return;
             } else if (currentMode === 'select' && !nodeGroup && !edgeGroup) {
                 deselectAll();
@@ -265,6 +294,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 node.y = y - appState.dragOffsetY;
                 updateRender();
             }
+        } else if (appState.dragEdgeId && currentMode === 'select') {
+            const edge = appState.edges.find(ed => ed.id === appState.dragEdgeId);
+            if (edge) {
+                edge.cpX = x - appState.dragEdgeOffsetX;
+                edge.cpY = y - appState.dragEdgeOffsetY;
+                updateRender();
+            }
         } else if (appState.isDrawingEdge) {
             appState.drawingPoints.push({ x, y });
             updateRender();
@@ -280,6 +316,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (appState.dragNodeId) {
             appState.dragNodeId = null;
+        }
+
+        if (appState.dragEdgeId) {
+            appState.dragEdgeId = null;
         }
 
         if (appState.isDrawingEdge) {
@@ -318,6 +358,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     canvas.addEventListener('mouseleave', () => {
         appState.dragNodeId = null;
+        appState.dragEdgeId = null;
         if (isPanning) {
             isPanning = false;
             canvas.style.cursor = 'default';
@@ -451,14 +492,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 const y = sourceInfo.y;
                 const r = STATE_RADIUS;
                 const loopRadius = 30;
+                const apexX = edge.cpX != null ? edge.cpX : x;
+                const apexY = edge.cpY != null ? edge.cpY : (y - loopRadius * 3);
                 const x1 = x - r * 0.5;
                 const y1 = y - r * 0.866;
                 const x2 = x + r * 0.5;
                 const y2 = y - r * 0.866;
 
-                path.setAttribute('d', `M ${x1} ${y1} C ${x - loopRadius * 1.5} ${y - loopRadius * 3}, ${x + loopRadius * 1.5} ${y - loopRadius * 3}, ${x2} ${y2}`);
-                textX = x;
-                textY = y - loopRadius * 3.3;
+                path.setAttribute('d', `M ${x1} ${y1} C ${apexX - 24} ${apexY}, ${apexX + 24} ${apexY}, ${x2} ${y2}`);
+                textX = apexX;
+                textY = apexY - 8;
             } else {
                 const dx = targetInfo.x - sourceInfo.x;
                 const dy = targetInfo.y - sourceInfo.y;
