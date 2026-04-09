@@ -190,6 +190,23 @@
         </div>
     </div>
 
+    <!-- Imported JSON Editor Modal -->
+    <div id="json-editor-modal" class="modal-overlay" style="display:none;">
+        <div class="modal-panel" style="max-width:960px;width:min(96vw,960px);">
+            <div class="modal-header">
+                <h2>Imported JSON Editor</h2>
+                <button id="btn-json-editor-close" class="modal-close">✕</button>
+            </div>
+            <p class="json-editor-note">The imported file is loaded below. Edit and apply to update the diagram.</p>
+            <textarea id="json-editor-input" class="json-editor-area" spellcheck="false"></textarea>
+            <div class="json-editor-actions">
+                <button id="btn-json-editor-apply" class="tool-btn" style="width:auto;padding:8px 18px;">
+                    <span class="icon">✅</span> Apply JSON
+                </button>
+            </div>
+        </div>
+    </div>
+
     <style>
     /* Active edge highlight during simulation */
     g.transition.active-edge-sim .transition-path {
@@ -223,6 +240,34 @@
         background: #000000;
         border-color: #ffffff;
         color: #ffffff;
+    }
+
+    .json-editor-note {
+        color: var(--text-secondary);
+        font-size: 0.82rem;
+        margin-bottom: 12px;
+    }
+
+    .json-editor-area {
+        width: 100%;
+        min-height: 360px;
+        max-height: 60vh;
+        resize: vertical;
+        border: 1px solid var(--glass-border);
+        border-radius: 10px;
+        padding: 12px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.78rem;
+        line-height: 1.55;
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+        outline: none;
+    }
+
+    .json-editor-actions {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 14px;
     }
     </style>
     <script src="./scripts/theme-switcher.js"></script>

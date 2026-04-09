@@ -1228,21 +1228,39 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function openImportedJsonEditor(data) {
+        const modal = document.getElementById('json-editor-modal');
+        const input = document.getElementById('json-editor-input');
+        if (!modal || !input) return;
+        input.value = JSON.stringify(data, null, 2);
+        modal.style.display = 'flex';
+    }
+
+    function applyImportedData(data, sourceLabel = 'imported JSON') {
+        if (!data || !Array.isArray(data.nodes) || !Array.isArray(data.edges)) {
+            throw new Error('Invalid format. JSON must contain nodes[] and edges[].');
+        }
+
+        saveSnapshot();
+        appState.nodes = JSON.parse(JSON.stringify(data.nodes));
+        appState.edges = JSON.parse(JSON.stringify(data.edges));
+        appState.nodeCounter = data.nodeCounter ?? data.nodes.length;
+        appState.edgeCounter = data.edgeCounter ?? data.edges.length;
+        normalizeImportedBidirectionalEdges();
+        deselectAll();
+        resetSim();
+        updateRender();
+        document.getElementById('status-message').textContent = `Automaton loaded from ${sourceLabel}.`;
+    }
+
     function importJSON(file) {
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
                 const data = JSON.parse(e.target.result);
-                if (!data.nodes || !data.edges) throw new Error('Invalid format');
-                saveSnapshot();
-                appState.nodes = data.nodes;
-                appState.edges = data.edges;
-                appState.nodeCounter = data.nodeCounter ?? data.nodes.length;
-                appState.edgeCounter = data.edgeCounter ?? data.edges.length;
-                normalizeImportedBidirectionalEdges();
-                deselectAll();
-                updateRender();
-                document.getElementById('status-message').textContent = 'Automaton imported successfully.';
+                applyImportedData(data, 'imported file');
+                document.getElementById('import-modal').style.display = 'none';
+                openImportedJsonEditor(data);
             } catch (err) {
                 alert('Failed to import: ' + err.message);
             }
@@ -1271,6 +1289,26 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target.files[0]) {
             importJSON(e.target.files[0]);
             e.target.value = '';
+        }
+    });
+
+    document.getElementById('btn-json-editor-close').addEventListener('click', () => {
+        document.getElementById('json-editor-modal').style.display = 'none';
+    });
+
+    document.getElementById('json-editor-modal').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('json-editor-modal')) {
+            document.getElementById('json-editor-modal').style.display = 'none';
+        }
+    });
+
+    document.getElementById('btn-json-editor-apply').addEventListener('click', () => {
+        try {
+            const raw = document.getElementById('json-editor-input').value;
+            const data = JSON.parse(raw);
+            applyImportedData(data, 'JSON editor');
+        } catch (err) {
+            alert('Failed to apply JSON: ' + err.message);
         }
     });
 
