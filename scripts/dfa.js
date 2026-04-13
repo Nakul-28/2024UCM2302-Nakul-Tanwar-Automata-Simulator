@@ -769,6 +769,33 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function syncSimulationVisuals() {
+        updateTapeVisualState();
+        updateRender();
+
+        if (appState.sim.status === 'accepted' || appState.sim.status === 'rejected') {
+            setActiveTransitionHighlights([]);
+            return;
+        }
+
+        if (appState.sim.head >= appState.sim.tape.length) {
+            setActiveTransitionHighlights([]);
+            return;
+        }
+
+        const symbol = appState.sim.tape[appState.sim.head];
+        const upcomingEdgeIds = new Set();
+        appState.sim.activeStates.forEach(stateId => {
+            appState.edges.forEach(edge => {
+                if (edge.from === stateId && edge.symbols.includes(symbol)) {
+                    upcomingEdgeIds.add(edge.id);
+                }
+            });
+        });
+
+        setActiveTransitionHighlights(Array.from(upcomingEdgeIds));
+    }
+
     function pushSimSnapshot() {
         appState.sim.history.push({
             activeStates: [...appState.sim.activeStates],
@@ -795,9 +822,7 @@ document.addEventListener('DOMContentLoaded', () => {
         uiControls.resultBadge.className = previous.resultClassName;
         uiControls.resultBadge.textContent = previous.resultText;
 
-        updateTapeVisualState();
-        updateRender();
-        setActiveTransitionHighlights(previous.activeEdgeIds || []);
+        syncSimulationVisuals();
         pushLiveLog(`Stepped backward to input index ${appState.sim.head}.`, true);
         return true;
     }
@@ -1025,9 +1050,7 @@ document.addEventListener('DOMContentLoaded', () => {
             pushLiveLog('No start state is set.', true);
         }
 
-        updateRender(); // will render active states 
-        setActiveTransitionHighlights([]);
-        updateTapeVisualState();
+        syncSimulationVisuals();
 
         // Empty input is accepted iff an accepting state is reachable at start.
         if (appState.sim.tape.length === 0) {
@@ -1070,10 +1093,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         appState.sim.activeStates = getEpsilonClosure(Array.from(nextStates));
 
-        setActiveTransitionHighlights(Array.from(usedTransitions));
-
         appState.sim.head++;
-        updateTapeVisualState();
+        syncSimulationVisuals();
 
         if (takenTransitions.length === 0) {
             const fromLabel = activeBeforeStep.length ? getStateLabel(activeBeforeStep[0]) : '∅';
@@ -1085,8 +1106,6 @@ document.addEventListener('DOMContentLoaded', () => {
             pushLiveLog(`Step ${appState.sim.head}: ${detail}`);
             pushLiveLog(`Active after step: ${formatStateSet(appState.sim.activeStates)}`, true);
         }
-
-        updateRender();
 
         // Re-evaluate immediately if consumed fully
         if (appState.sim.head >= appState.sim.tape.length) {
@@ -1180,7 +1199,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             };
 
-            updateTapeVisualState();
+            syncSimulationVisuals();
 
             const initialSpeed = 2100 - parseInt(uiControls.speedSlider.value);
             appState.sim.intervalId = setTimeout(playStep, initialSpeed);

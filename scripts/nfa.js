@@ -673,6 +673,33 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function syncSimulationVisuals() {
+        updateTapeVisualState();
+        updateRender();
+
+        if (appState.sim.status === 'accepted' || appState.sim.status === 'rejected') {
+            setActiveTransitionHighlights([]);
+            return;
+        }
+
+        if (appState.sim.head >= appState.sim.tape.length) {
+            setActiveTransitionHighlights([]);
+            return;
+        }
+
+        const symbol = appState.sim.tape[appState.sim.head];
+        const upcomingEdgeIds = new Set();
+        appState.sim.activeStates.forEach(stateId => {
+            appState.edges.forEach(edge => {
+                if (edge.from === stateId && edge.symbols.includes(symbol)) {
+                    upcomingEdgeIds.add(edge.id);
+                }
+            });
+        });
+
+        setActiveTransitionHighlights(Array.from(upcomingEdgeIds));
+    }
+
     function pushSimSnapshot() {
         appState.sim.history.push({
             activeStates: [...appState.sim.activeStates],
@@ -699,10 +726,8 @@ document.addEventListener('DOMContentLoaded', () => {
         uiControls.resultBadge.className = previous.resultClassName;
         uiControls.resultBadge.textContent = previous.resultText;
 
-        updateTapeVisualState();
         updateActiveStatesDisplay();
-        updateRender();
-        setActiveTransitionHighlights(previous.activeEdgeIds || []);
+        syncSimulationVisuals();
         pushLiveLog(`Stepped backward to input index ${appState.sim.head}.`, true);
         return true;
     }
@@ -918,9 +943,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Update status with active state count
         updateActiveStatesDisplay();
-        updateRender();
-        setActiveTransitionHighlights([]);
-        updateTapeVisualState();
+        syncSimulationVisuals();
     }
 
     function updateActiveStatesDisplay() {
@@ -970,10 +993,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Apply epsilon closure to the result
         appState.sim.activeStates = getEpsilonClosure(Array.from(nextStates));
 
-        setActiveTransitionHighlights(Array.from(usedTransitions));
-
         appState.sim.head++;
-        updateTapeVisualState();
+        syncSimulationVisuals();
 
         if (takenTransitions.length === 0) {
             const detail = activeBeforeStep.length
@@ -996,7 +1017,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         updateActiveStatesDisplay();
-        updateRender();
 
         if (appState.sim.head >= appState.sim.tape.length) {
             checkAcceptance();
@@ -1071,7 +1091,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             };
 
-            updateTapeVisualState();
+            syncSimulationVisuals();
 
             const initialSpeed = 2100 - parseInt(uiControls.speedSlider.value);
             appState.sim.intervalId = setTimeout(playStep, initialSpeed);
