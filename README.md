@@ -2,7 +2,7 @@
 
 An interactive finite automata visualization tool for designing and simulating DFA and NFA with a technical blueprint aesthetic. <br>
 Deployment Links:
-- Github Pages: https://nakul-28.github.io/Automata-Simulator/
+- Github Pages: [https://nakul-28.github.io/2024UCM2302-Nakul-Tanwar-Automata-Simulator/](https://nakul-28.github.io/2024UCM2302-Nakul-Tanwar-Automata-Simulator/)]
 - Vercel Link: https://automata-simulator-tafl.vercel.app/
 ## Table of Contents
 1. [Features](#features)
